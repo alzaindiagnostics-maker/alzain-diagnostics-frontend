@@ -1,10 +1,10 @@
 import axios from 'axios';
 import { INITIAL_PACKAGES } from '../data/initialPackages';
 
-const rawBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
-const cleanHost = rawBaseUrl.replace(/\/+$/, '').replace(/\/api$/, '');
-const AUTH_BASE_URL = import.meta.env.VITE_API_AUTH_URL || `${cleanHost}/api/auth`;
-const ADMIN_BASE_URL = import.meta.env.VITE_API_ADMIN_URL || `${cleanHost}/api/admin`;
+const rawBaseUrl = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '' : 'http://localhost:8080');
+const cleanHost = rawBaseUrl ? rawBaseUrl.replace(/\/+$/, '').replace(/\/api$/, '') : '';
+const AUTH_BASE_URL = import.meta.env.VITE_API_AUTH_URL || (cleanHost ? `${cleanHost}/api/auth` : '/api/auth');
+const ADMIN_BASE_URL = import.meta.env.VITE_API_ADMIN_URL || (cleanHost ? `${cleanHost}/api/admin` : '/api/admin');
 
 export const adminApi = axios.create({
   baseURL: ADMIN_BASE_URL,

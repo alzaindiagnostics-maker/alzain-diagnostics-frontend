@@ -1,9 +1,9 @@
 import axios from 'axios';
 import { INITIAL_PACKAGES } from '../data/initialPackages';
 
-const rawBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
-const cleanHost = rawBaseUrl.replace(/\/+$/, '').replace(/\/api$/, '');
-const API_BASE_URL = `${cleanHost}/api/public`;
+const rawBaseUrl = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '' : 'http://localhost:8080');
+const cleanHost = rawBaseUrl ? rawBaseUrl.replace(/\/+$/, '').replace(/\/api$/, '').replace(/\/public$/, '') : '';
+const API_BASE_URL = cleanHost ? `${cleanHost}/api/public` : '/api/public';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
