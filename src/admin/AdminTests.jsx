@@ -1,20 +1,40 @@
 import React, { useState, useEffect } from 'react';
 import { Microscope, Plus, Trash2, Search, Loader2 } from 'lucide-react';
-import { fetchAdminTests, createTest, deleteTest } from '../api/adminApi';
+import { fetchAdminTests, fetchTestCategories, createTest, deleteTest } from '../api/adminApi';
+
+const DEFAULT_CATEGORIES = [
+  'General Pathology',
+  'Diabetes',
+  'Thyroid',
+  'Fever / Serology',
+  'Liver',
+  'Kidney',
+  'Vitamins',
+  'Hematology',
+  'Biochemistry',
+  'Electrolytes',
+  'Health Checkup',
+];
 
 export default function AdminTests() {
   const [tests, setTests] = useState([]);
+  const [dbCategories, setDbCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [newTestName, setNewTestName] = useState('');
-  const [newTestCat, setNewTestCat] = useState('General');
+  const [newTestCatSelect, setNewTestCatSelect] = useState('General Pathology');
+  const [customCategory, setCustomCategory] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const loadTests = async () => {
     setLoading(true);
     try {
-      const data = await fetchAdminTests();
+      const [data, cats] = await Promise.all([
+        fetchAdminTests(),
+        fetchTestCategories(),
+      ]);
       if (data) setTests(data);
+      if (Array.isArray(cats)) setDbCategories(cats);
     } catch (err) {
       console.error(err);
     } finally {
@@ -26,18 +46,37 @@ export default function AdminTests() {
     loadTests();
   }, []);
 
+  const allCategories = Array.from(
+    new Set([
+      ...DEFAULT_CATEGORIES,
+      ...(dbCategories || []),
+      ...tests.map((t) => t.category).filter(Boolean),
+    ])
+  ).sort((a, b) => a.localeCompare(b));
+
   const handleAddTest = async (e) => {
     e.preventDefault();
     if (!newTestName.trim()) return;
+
+    let finalCategory = newTestCatSelect;
+    if (newTestCatSelect === 'OTHER') {
+      if (!customCategory.trim()) {
+        alert('Please specify a custom category name.');
+        return;
+      }
+      finalCategory = customCategory.trim();
+    }
 
     setIsSubmitting(true);
     try {
       await createTest({
         name: newTestName.trim(),
-        category: newTestCat,
+        category: finalCategory,
         active: true
       });
       setNewTestName('');
+      setCustomCategory('');
+      setNewTestCatSelect(allCategories[0] || 'General Pathology');
       loadTests();
     } catch (err) {
       alert('Failed to create test: ' + err.message);
@@ -47,7 +86,7 @@ export default function AdminTests() {
   };
 
   const handleDeleteTest = async (id) => {
-    if (window.confirm('Delete test parameter from master database?')) {
+    if (window.confirm('Delete test parameter from PostgreSQL master database?')) {
       try {
         await deleteTest(id);
         loadTests();
@@ -58,16 +97,16 @@ export default function AdminTests() {
   };
 
   const filteredTests = tests.filter(t => 
-    t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    t.category.toLowerCase().includes(searchTerm.toLowerCase())
+    (t.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (t.category || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
     <div className="admin-tests-view">
       <div className="dashboard-top-row">
         <div>
-          <h1 className="dashboard-title">Test Master Database (MySQL)</h1>
-          <p className="text-muted">Manage individual lab test definitions and clinical categories in MySQL.</p>
+          <h1 className="dashboard-title">Test Master Database (PostgreSQL)</h1>
+          <p className="text-muted">Manage individual lab test definitions and clinical categories in PostgreSQL.</p>
         </div>
       </div>
 
@@ -78,28 +117,40 @@ export default function AdminTests() {
           <input
             type="text"
             required
-            placeholder="Test Name (e.g., Vitamin D3 25-OH)"
+            placeholder="Test Name (e.g., Stool Routine Examination)"
             className="form-input"
             value={newTestName}
             onChange={(e) => setNewTestName(e.target.value)}
           />
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
             <select
               className="form-input"
-              value={newTestCat}
-              onChange={(e) => setNewTestCat(e.target.value)}
+              value={newTestCatSelect}
+              onChange={(e) => setNewTestCatSelect(e.target.value)}
+              style={{ flex: 1, minWidth: '160px' }}
             >
-              <option value="General">General</option>
-              <option value="Diabetes">Diabetes</option>
-              <option value="Thyroid">Thyroid</option>
-              <option value="Fever / Serology">Fever / Serology</option>
-              <option value="Liver">Liver</option>
-              <option value="Kidney">Kidney</option>
-              <option value="Vitamins">Vitamins</option>
-              <option value="Hematology">Hematology</option>
+              {allCategories.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
+              <option value="OTHER">+ Other (New Category)</option>
             </select>
+
+            {newTestCatSelect === 'OTHER' && (
+              <input
+                type="text"
+                required
+                placeholder="New Category Name *"
+                className="form-input"
+                style={{ flex: 1, minWidth: '160px' }}
+                value={customCategory}
+                onChange={(e) => setCustomCategory(e.target.value)}
+              />
+            )}
+
             <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
-              <Plus size={18} /> {isSubmitting ? 'Adding...' : 'Add'}
+              <Plus size={18} /> {isSubmitting ? 'Adding...' : 'Add Test'}
             </button>
           </div>
         </form>

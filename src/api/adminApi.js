@@ -181,6 +181,16 @@ export const deleteTest = async (id) => {
   return response.data;
 };
 
+export const fetchTestCategories = async () => {
+  try {
+    const response = await adminApi.get('/tests/categories');
+    return response.data;
+  } catch (error) {
+    console.warn('Test categories fetch failed:', error.message);
+    return [];
+  }
+};
+
 // Booking Management APIs
 export const fetchAdminBookings = async (statusFilter = 'ALL') => {
   try {
